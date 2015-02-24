@@ -1,22 +1,78 @@
-import socket               # Import socket module
+from config import ServerConfig
+from threading import Thread
+from functools import wraps
+import socket
+import time
 import sys
+import Queue
 
-s = socket.socket()         # Create a socket object
-host = socket.gethostname() # Get local machine name
-port = 12345                # Reserve a port for your service.
-s.bind((host, port))        # Bind to the port
+# function wrapper 
+def thread(daemon):
+	def decorator(f):
+		@wraps(f)
+		def wrapper(*args, **kwargs):
+			worker = Thread(target=f,args=args,kwargs=kwargs)
+			worker.daemon = daemon
+			worker.start()
+			return worker
+		return wrapper
+	return decorator
 
-argv = sys.argv
-if len(argv) == 2:
-	filename = argv[1]
+# major server class
+class Server(object):
+	"""docstring for Server"""
+	def __init__(self):
+		super(Server, self).__init__()
+		self.config = ServerConfig()
+		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		self.s.bind((self.config.host,self.config.port))
+		self.message = Queue.Queue()	# A thread safe queue to implement FIFO ordering
+		self.dest = Queue.Queue()
 
-s.listen(5)                 # Now wait for client connection.
-while True:
-   c, addr = s.accept()     # Establish connection with client.
-   print 'Got connection from', addr
-   c.sendall(filename)
-   f = open(filename)
-   c.sendall(f.read())
-   print 'file sent to all clients\n'
-   f.close()
-   c.close()                # Close the connection
+	# thread for listening
+	@thread(True)
+	def listen(self):
+		while True:
+			message, addr = self.s.recvfrom(1024)
+			print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(time.time()))
+			print "Enter your command here : "
+
+
+	# main thread read and write
+	@thread(False)
+	def read(self):
+		while True:
+			cmd = raw_input("Enter your command here : ")
+
+			if cmd.startswith('q'):
+				return
+
+			elif cmd.startswith('Send'):
+				cmd = cmd.split(' ')
+				self.message.put(cmd[1])
+				""" if host is not provided, assume it's local server """
+				try:
+					self.dest.put(cmd[2])
+				except:
+					self.dest.put(self.config.host)
+					cmd.append(self.config.host)
+
+				print "Send %s to %s, system time is %s" %(str(cmd[1]),str(cmd[2]),str(time.time()))
+
+	# thread for sending messages
+	@thread(True)
+	def send(self):
+		while True:
+			message = self.message.get()	# get the message and host atomically
+			dest = self.dest.get()
+			addr = (dest,self.config.port)
+			time.sleep(self.config.get_time())	# simulate delay for message delivery
+			self.s.sendto(message, addr)
+
+
+if __name__ == '__main__':
+	my_server = Server()
+	t_listen = my_server.listen()
+	t_send = my_server.send()
+	t_read = my_server.read()
+	t_read.join()	# wait for only this thread to end, others will be killed as soon as main thread ends
