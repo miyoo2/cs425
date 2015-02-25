@@ -37,6 +37,8 @@ class Server(object):
 	def listen(self):
 		while True:
 			message, addr = self.s.recvfrom(1024)	# 1024 the size
+			if not message:
+				continue
 			self.inbox.put((message, addr))
 			#print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(time.time()))
 			#print "Enter your command here : "
@@ -82,8 +84,13 @@ class Server(object):
 	@thread(True)
 	def send(self):
 		while True:
-			message = self.message.get()	# get the message and host atomically
-			addr = self.dest.get()
+			try:
+				message = self.message.get()	# get the message and host atomically
+				addr = self.dest.get()
+			except:
+				continue
+			if not message:
+				continue
 			#time.sleep(self.config.get_time())	# simulate delay for message delivery
 			self.s.sendto(message, addr)
 
@@ -91,7 +98,10 @@ class Server(object):
 	@thread(True)
 	def receive(self):
 		while True:
-			message, addr = self.inbox.get()
+			try:
+				message, addr = self.inbox.get()
+			except:
+				continue
 			time.sleep(self.config.get_time())	# simulate delay for message delivery
 			print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
 			print "Enter your command here : "
