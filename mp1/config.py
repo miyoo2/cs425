@@ -1,12 +1,15 @@
 import random
 import socket
+import json
 
 class ServerConfig(object):
 	"""docstring for ServerConfig"""
-	def __init__(self):
-		# 10s as max delay
-		self.MAX = 10
-		self.port = 12345
+	def __init__(self,node):
+		# load configuration from json file
+		data = open('config.json')
+		data = json.load(data)
+		self.MAX = int(data[str(node)]['MAX'])
+		self.port = int(data[str(node)]['port'])
 		self.host = socket.gethostname()
 
 	def get_time(self):
