@@ -1,6 +1,7 @@
 from config import ServerConfig
 from threading import Thread
 from functools import wraps
+from datetime import datetime
 import socket
 import time
 import sys
@@ -50,17 +51,32 @@ class Server(object):
 			if cmd.lower().startswith('q'):
 				return
 
-			elif cmd.lower().startswith('Send'):
+			elif cmd.lower().startswith('send'):
 				cmd = cmd.split(' ')
+				if len(cmd) < 3:
+					print 'At least provide port'
+					continue
 				self.message.put(cmd[1])
 				""" if host is not provided, assume it's local server """
 				try:
-					self.dest.put(cmd[2])
+					self.dest.put((int(cmd[2]),int(cmd[3])))	# enter [host] [port]
 				except:
-					self.dest.put((self.config.host,self.config.port))
+					self.dest.put((self.config.host,int(cmd[2])))
 					cmd.append((self.config.host,self.config.port))
 
-				print "Send %s to %s, system time is %s" %(str(cmd[1]),str(cmd[2]),str(time.time()))
+				print "Send %s to %s, system time is %s" %(str(cmd[1]),str(cmd[2]),str(datetime.now()))
+
+			elif cmd.lower().startswith('delete'):
+				pass
+
+			elif cmd.lower().startswith('get'):
+				pass
+
+			elif cmd.lower().startswith('insert'):
+				pass
+
+			elif cmd.lower().startswith('update'):
+				pass
 
 	# thread for sending messages
 	@thread(True)
@@ -77,14 +93,14 @@ class Server(object):
 		while True:
 			message, addr = self.inbox.get()
 			time.sleep(self.config.get_time())	# simulate delay for message delivery
-			print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(time.time()))
+			print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
 			print "Enter your command here : "
 
 
 
 if __name__ == '__main__':
 	if len(sys.argv) < 2:
-		sys.argv.append(int(raw_input("Enter node letter a~d: ")))
+		sys.argv.append(raw_input("Enter node letter a~d: "))
 
 	my_server = Server(sys.argv[1])
 	t_listen = my_server.listen()
