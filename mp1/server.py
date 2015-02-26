@@ -61,7 +61,7 @@ class Server(object):
 				self.message.put(cmd[1])
 				""" if host is not provided, assume it's local server """
 				try:
-					self.dest.put((int(cmd[2]),int(cmd[3])))	# enter [host] [port]
+					self.dest.put((cmd[2],int(cmd[3])))	# enter [host] [port]
 				except:
 					self.dest.put((self.config.host,int(cmd[2])))
 					cmd.append((self.config.host,self.config.port))
