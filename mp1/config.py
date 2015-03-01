@@ -11,6 +11,7 @@ class ServerConfig(object):
 		self.MAX = int(data[str(node)]['MAX'])
 		self.port = int(data[str(node)]['port'])
 		self.host = socket.gethostname()
+		self.central = int(data['central']['port'])
 
 	def get_time(self):
 		return random.randint(0,self.MAX)

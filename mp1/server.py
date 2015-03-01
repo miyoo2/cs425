@@ -42,6 +42,7 @@ class Server(object):
 			self.inbox.put((message, addr))
 			#print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(time.time()))
 			#print "Enter your command here : "
+			self.receive()
 
 
 	# main thread read and write
@@ -67,11 +68,19 @@ class Server(object):
 					cmd.append((self.config.host,self.config.port))
 
 				print "Send %s to %s, system time is %s" %(str(cmd[1]),str(cmd[2]),str(datetime.now()))
-
+			
 			elif cmd.lower().startswith('delete'):
 				pass
 
 			elif cmd.lower().startswith('get'):
+				cmd = cmd.split(' ')
+				if len(cmd) < 2:
+					print 'Please provide key'	# missing key
+					continue
+				self.message.put(cmd[0]+' '+cmd[1])
+				self.dest.pust((self.config.host,self.config.central))	# send the message to central server
+				
+
 				pass
 
 			elif cmd.lower().startswith('insert'):
@@ -97,14 +106,13 @@ class Server(object):
 	# thread for simulation delay by printing message after sleep
 	@thread(True)
 	def receive(self):
-		while True:
-			try:
-				message, addr = self.inbox.get()
-			except:
-				continue
-			time.sleep(self.config.get_time())	# simulate delay for message delivery
-			print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
-			print "Enter your command here : "
+		try:
+			message, addr = self.inbox.get()
+		except:
+			return
+		time.sleep(self.config.get_time())	# simulate delay for message delivery
+		print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
+		print "Enter your command here : "
 
 
 
@@ -115,6 +123,5 @@ if __name__ == '__main__':
 	my_server = Server(sys.argv[1])
 	t_listen = my_server.listen()
 	t_send = my_server.send()
-	t_receive = my_server.receive()
 	t_read = my_server.read()
 	t_read.join()	# wait for only this thread to end, others will be killed as soon as main thread ends
