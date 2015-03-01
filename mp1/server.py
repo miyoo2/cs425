@@ -69,10 +69,7 @@ class Server(object):
 
 				print "Send %s to %s, system time is %s" %(str(cmd[1]),str(cmd[2]),str(datetime.now()))
 			
-			elif cmd.lower().startswith('delete'):
-				pass
-
-			elif cmd.lower().startswith('get'):
+			elif cmd.lower().startswith('get') or cmd.lower().startswith('delete'):
 				cmd = cmd.split(' ')
 				if len(cmd) < 2:
 					print 'Please provide key'	# missing key
@@ -80,14 +77,13 @@ class Server(object):
 				self.message.put(cmd[0]+' '+cmd[1])
 				self.dest.pust((self.config.host,self.config.central))	# send the message to central server
 				
-
-				pass
-
-			elif cmd.lower().startswith('insert'):
-				pass
-
-			elif cmd.lower().startswith('update'):
-				pass
+			elif cmd.lower().startswith('insert') or cmd.lower().startswith('update'):
+				cmd = cmd.split(' ')
+				if len(cmd) < 3:
+					print 'Please provide key and value'
+					continue
+				self.message.put(str.join(cmd))
+				self.dest.puts((self.config.host,self.config.central))
 
 	# thread for sending messages
 	@thread(True)
@@ -112,7 +108,23 @@ class Server(object):
 			return
 		time.sleep(self.config.get_time())	# simulate delay for message delivery
 		print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
-		print "Enter your command here : "
+		
+		message.split(' ')
+		if message[0] is 'get':
+			print "The value corresponding to %s is %s" %(message[1],replica[int(message[1])])
+
+		elif message[0] is 'delete':
+			print "Delete %s from all replicas" %(message[1])
+			del replica[int(message[1])]
+
+		elif message[0] is 'insert':
+			print "Insert %s : %s into replica" %(message[1],message[2])
+			replica[int(message[1])] = int(message[2])
+
+		elif message[0] is 'update':
+			print "Update %s : %s " %(message[1],message[2])
+			replica[int(message[1])] = int(message[2])
+
 
 
 
