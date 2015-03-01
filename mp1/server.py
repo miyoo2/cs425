@@ -107,10 +107,13 @@ class Server(object):
 		except:
 			return
 		time.sleep(self.config.get_time())	# simulate delay for message delivery
-		print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
-		
+
 		message = message.split(' ')
-		
+		addr = message.pop(-1)
+		message = ' '.join(message)
+		print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
+
+		message = message.split(' ')
 		if message[0] == 'get':
 			print "The value corresponding to %s is %s" %(message[1],self.replica[int(message[1])])
 
@@ -126,7 +129,11 @@ class Server(object):
 			print "Update %s : %s " %(message[1],message[2])
 			self.replica[int(message[1])] = int(message[2])
 
+		else:
+			return
 
+		self.message.put('ack '+message[-1])
+		self.dest.put((self.config.host,self.config.central))
 
 
 if __name__ == '__main__':
