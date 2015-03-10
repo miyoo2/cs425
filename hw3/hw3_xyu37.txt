@@ -1,0 +1,15 @@
+
+NAME:Xiaofo Yu	
+netid: xyu37
+
+
+CS 425/ECE 428 Distributed Systems
+Homework 3 Answer Sheet
+
+1.(a) No, because e -> g and g is in C but e is not in C.
+
+1.(b) {a,b,h}
+
+2. Yes, since reliable broadcast channel is used, all the nodes will know if faulty nodes misbehave. So after a round of communication, all non faulty nodes should all have the same information or find out the faulty nodes.
+
+3. No， because there is a possibility that two faulty nodes which are not adjacent crash after they send messages to the same one non faulty nodes which makes the two non-faulty nodes unable to communicate anymore. Therefore, the final set message of two non-faulty nodes can be different. 

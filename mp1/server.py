@@ -31,6 +31,7 @@ class Server(object):
 		self.dest = Queue.Queue()
 		self.inbox = Queue.Queue()
 		self.replica = dict()	# key-value store
+		self.delay = 0	# invocation & operation delay
 
 	# thread for listening
 	@thread(True)
@@ -42,7 +43,7 @@ class Server(object):
 			self.inbox.put((message, addr))
 			#print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(time.time()))
 			#print "Enter your command here : "
-			self.receive()
+			self.receive()	# invode a thread for FIFO and delay
 
 
 	# main thread read and write
@@ -51,8 +52,22 @@ class Server(object):
 		while True:
 			cmd = raw_input("Enter your command here : ")
 
+			time.sleep(self.delay)	# delay the next operation
+			self.delay = 0	# reset the delay time
+
 			if cmd.lower().startswith('q'):
 				return
+			# show all keys in the local replica
+			elif cmd.lower().startswith('show-all'):
+				for key in self.replica:
+					print key, self.replica[key]
+			# set the next delay
+			elif cmd.lower().startswith('delay'):
+				cmd = cmd.split(' ')
+				if len(cmd) < 2:
+					self.delay = 0
+				else:
+					self.delay = int(cmd[1])
 
 			elif cmd.lower().startswith('send'):
 				cmd = cmd.split(' ')
@@ -71,19 +86,24 @@ class Server(object):
 			
 			elif cmd.lower().startswith('get') or cmd.lower().startswith('delete'):
 				cmd = cmd.split(' ')
-				if len(cmd) < 2:
+				if len(cmd) < 3:
 					print 'Please provide key'	# missing key
 					continue
-				self.message.put(cmd[0]+' '+cmd[1])
-				self.dest.put((self.config.host,self.config.central))	# send the message to central server
+				if cmd[-1] == '1':	# linearizability
+					self.message.put(cmd[0]+' '+cmd[1])
+					self.dest.put((self.config.host,self.config.central))	# send the message to central server
+				elif cmd[-1] == '2':	# sequential consistent
+					print "The value corresponding to %s is %s" %(cmd[1],self.replica[int(cmd[1])])
 				
 			elif cmd.lower().startswith('insert') or cmd.lower().startswith('update'):
 				cmd = cmd.split(' ')
-				if len(cmd) < 3:
+				if len(cmd) < 4:
 					print 'Please provide key and value'
 					continue
-				self.message.put(cmd[0]+' '+cmd[1]+' '+cmd[2])
-				self.dest.put((self.config.host,self.config.central))
+				if cmd[-1] == '1' or cmd[-1] == '2':	# linearizability and sequential consistent
+					self.message.put(cmd[0]+' '+cmd[1]+' '+cmd[2])
+					self.dest.put((self.config.host,self.config.central))
+
 
 	# thread for sending messages
 	@thread(True)
@@ -109,7 +129,8 @@ class Server(object):
 		time.sleep(self.config.get_time())	# simulate delay for message delivery
 
 		message = message.split(' ')
-		addr = message.pop(-1)
+		if addr[1] == 23333:
+			addr = message.pop(-1)
 		message = ' '.join(message)
 		print "Receive %s from %s, max delay is %s, system time is %s" %(message, addr, self.config.MAX, str(datetime.now()))
 

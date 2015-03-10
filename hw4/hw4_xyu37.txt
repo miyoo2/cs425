@@ -1,0 +1,21 @@
+
+NAME:Xiaofo Yu	
+netid: xyu37
+
+
+CS 425/ECE 428 Distributed Systems
+Homework 4 Answer Sheet
+
+1. Yes
+
+2. No, suppose two processes a,b and a delivers m while b delivers n simultaneously. Then a,b could have delivered m,n and n,m which are different and not satisfying Total ordering. Causal ordering implies FIFO but not Total ordering.
+
+3.(a) Y[1] = [ 5/3, 4/3 ]^T
+
+3.(b) No it’s not stochastic matrix.
+
+4. g = (0,2,1) f = (2,4,2)
+
+5.(a) True
+
+5.(b) True

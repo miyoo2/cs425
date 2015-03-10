@@ -1,0 +1,15 @@
+
+NAME:Xiaofo Yu	
+netid: xyu37
+
+
+CS 425/ECE 428 Distributed Systems
+Homework 3 Answer Sheet
+
+1.(a) No, because e -> g and g is in C but e is not in C.
+
+1.(b) {a,b,h}
+
+2. No, because after a round of communication, each node will get 2 wrong messages from the faulty nodes and 2 correct messages from the regular nodes.
+
+3. No， because there is a possibility that two faulty nodes crash after they send messages to the same one non faulty nodes which makes the two non-faulty nodes unable to communicate anymore. Therefore, the final set message of two non-faulty nodes can be different. 

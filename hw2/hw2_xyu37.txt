@@ -1,0 +1,23 @@
+NAME:Xiaofo Yu
+netid: xyu37
+
+
+CS 425/ECE 428 Distributed Systems
+Homework 2 Answer Sheet
+
+
+1. Logical timestamps:
+   Event c = 4
+   Event f = 6
+
+2. Events concurrent with e = h,a,b
+
+3. Events happened-before event c = a,b,e,g,h
+
+4. (a) False
+4. (b) True
+
+5. Yes
+ 
+   Explanation: In reliable broadcast,  if some one correct process delivers
+message m, then all other correct processes in group(m) will eventually deliver m. Therefore, only one round of communication is required for the group to reach consensus since if there is one correct process, all will eventually have the message. If there is no correct process, they will all receive nothing.

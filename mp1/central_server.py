@@ -10,13 +10,13 @@ import Queue
 
 class Central(object):
 	"""docstring for Central"""
-	def __init__(self,model):
+	def __init__(self):
 		super(Central, self).__init__()
 		data = open('config.json')
 		data = json.load(data)
-		self.model = int(model)
-		self.port = int(data['central']['port'])
-		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+		#self.model = int(model)
+		self.port = int(data['central']['port'])	# get self port
+		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)	# form a socket
 		self.s.bind((socket.gethostname(),self.port))
 		self.nodes = dict()
 
@@ -54,9 +54,7 @@ class Central(object):
 				return
 
 if __name__ == '__main__':
-	if len(sys.argv) < 2:
-		sys.argv.append(raw_input('Enter consistency model 1. Linearizability 2. Sequential consistency 3. Eventual consistency, W = 1, R = 1 4. Eventual consistency, W = 2, R = 2 '))
-	central_server = Central(sys.argv[1])
+	central_server = Central()
 
 	t_run = central_server.run()
 	t_deliver = central_server.deliver()
