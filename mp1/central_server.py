@@ -1,7 +1,4 @@
-from config import ServerConfig
-from threading import Thread
-from functools import wraps
-from server import thread
+from serializer import thread
 import json
 import socket
 import time
@@ -22,7 +19,7 @@ class Central(object):
 
 		for key in data:
 			if key != "central":
-				self.nodes[data[key]['port']] = (socket.gethostname(),int(data[key]['port']))	# only work for locals
+				self.nodes[key] = (socket.gethostname(),int(data[key]['port']))	# only work for locals
 
 		self.sequence = Queue.Queue()	# thread safe queue to sequence messages
 
@@ -45,7 +42,7 @@ class Central(object):
 				continue
 			if message:
 				for port in self.nodes:
-					self.s.sendto(message+' '+str(addr[1]), self.nodes[port])
+					self.s.sendto(message, self.nodes[port])
 
 	@thread(False)
 	def quit(self):
