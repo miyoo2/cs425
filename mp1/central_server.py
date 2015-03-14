@@ -12,14 +12,14 @@ class Central(object):
 		data = open('config.json')
 		data = json.load(data)
 		#self.model = int(model)
-		self.port = int(data['central']['port'])	# get self port
+		self.port = int(data['e']['port'])	# get self port
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)	# form a socket
 		self.s.bind((socket.gethostname(),self.port))
 		self.nodes = dict()
 		self.counter = dict()	# count the acks
 
 		for key in data:
-			if key != "central":
+			if key != "e":
 				self.nodes[key] = (socket.gethostname(),int(data[key]['port']))	# only work for locals
 
 		self.sequence = Queue.Queue()	# thread safe queue to sequence messages

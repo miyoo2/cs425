@@ -16,7 +16,7 @@ class Server(object):
 		self.config(node)	# read config from json
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 		self.s.bind((self.host,self.port))
-		self.inbox = Queue.Queue()	# thread safe queue to implement FIFO ordering
+		self.inbox = [Queue.Queue()]*5	# thread safe queue to implement FIFO ordering
 		self.replica = dict()	# key-value store
 		self.delay = 0	# operation delays
 		self.node = node
@@ -33,11 +33,11 @@ class Server(object):
 		self.MAX = int(data[str(node)]['MAX'])	# max delay
 		self.port = int(data[str(node)]['port'])	# server's port
 		self.host = socket.gethostname()	# server's ip address
-		self.central = (socket.gethostname(),int(data['central']['port']))	# central server's port
+		self.central = (socket.gethostname(),int(data['e']['port']))	# central server's port
 		self.nodes = dict()	# other nodes ports
 
 		for key in data:
-			if key != "central":
+			if key != "e":
 				self.nodes[key] = (socket.gethostname(),int(data[key]['port']))	# only work for locals
 
 	"""random time generator"""
@@ -49,9 +49,11 @@ class Server(object):
 	def listen(self):
 		while True:
 			message, addr = self.s.recvfrom(1024)	# listen from the socket
+			# deserialize the message into components
+			ops,key,value,model,time_stamp,node = deserialize(message)
 
-			self.inbox.put((message, addr))	# put message into the queue
-			self.receive()	# self.invoke a thread to deliver the message
+			self.inbox[ord(node)-ord('a')].put((message, addr))	# put message into the queue
+			self.receive(ord(node)-ord('a'))	# self.invoke a thread to deliver the message
 
 	# main thread read and write
 	@thread(False)
@@ -175,12 +177,15 @@ class Server(object):
 					print "Key %s with value %s found at %s" %(cmd[1],self.replica[cmd[1]],self.node)
 				except KeyError:
 					print "Key %s DNE at node %s" %(cmd[1],self.node)
+			else:
+				invoke = False
+				print "No such cmd"
 
 	# thread for simulation delay by printing message after sleep
 	@thread(True)
-	def receive(self):
+	def receive(self,num):
 		time.sleep(self.get_time())	# simulation delay
-		message, addr = self.inbox.get()	# FIFO ordering by queue
+		message, addr = self.inbox[num].get()	# FIFO ordering by queue
 
 		# deserialize the message into components
 		ops,key,value,model,time_stamp,node = deserialize(message)
