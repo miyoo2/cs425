@@ -21,7 +21,6 @@ class Server(object):
 		self.delay = 0	# operation delays
 		self.node = node
 		self.stamps = dict()	# insertion time stamps
-		self.mytime = 0	# own logical time stamp
 		self.lock = Lock()	# a threading lock
 
 	"""json loader"""
@@ -71,7 +70,7 @@ class Server(object):
 					print 'Usage send [message] [dest]'
 					continue
 				#	use value field as message
-				self.s.sendto((serialize('send',0,cmd[1],0,0,self.node)),self.nodes[cmd[2]])
+				self.s.sendto((serialize('send',0,cmd[1],0,datetime.now(),self.node)),self.nodes[cmd[2]])
 
 			# write operations
 			elif cmd.lower().startswith('insert') or cmd.lower().startswith('update'):
@@ -81,7 +80,7 @@ class Server(object):
 					continue
 				# linearizibility & sequential consistency
 				if int(cmd[-1]) == 1 or int(cmd[-1]) == 2:
-					self.s.sendto(serialize(cmd[0],cmd[1],cmd[2],cmd[3],self.mytime,self.node),self.central)
+					self.s.sendto(serialize(cmd[0],cmd[1],cmd[2],cmd[3],datetime.now(),self.node),self.central)
 
 			# read
 			elif cmd.lower().startswith('get'):
@@ -91,10 +90,13 @@ class Server(object):
 					continue
 				# linearizability
 				if int(cmd[-1]) == 1:
-					self.s.sendto(serialize(cmd[0],cmd[1],0,cmd[2],self.mytime,self.node),self.central)
+					self.s.sendto(serialize(cmd[0],cmd[1],0,cmd[2],datetime.now(),self.node),self.central)
 				# sequential consistency
 				elif int(cmd[-1]) == 2:
-					print cmd[1],self.replica[cmd[1]]
+					try:
+						print "Key %s with value %s" %(cmd[1],self.replica[cmd[1]])
+					except KeyError:
+						pass
 
 			# show-all
 			elif cmd.lower().startswith('show-all'):
@@ -106,7 +108,23 @@ class Server(object):
 				cmd = cmd.split(' ')
 				if len(cmd) < 2:
 					print "Usage delay [T]"
+					continue
 				self.delay = int(cmd[1])
+
+			# search key
+			elif cmd.lower().startswith('search'):
+				cmd = cmd.split(' ')
+				if len(cmd) < 2:
+					print "Usage search [key]"
+					continue
+
+				for key in self.nodes:
+					if key != self.node:
+						self.s.sendto(serialize(cmd[0],cmd[1],0,1,datetime.now(),self.node),self.nodes[key])
+				try:
+					print "Key %s with value %s found at %s" %(cmd[1],self.replica[cmd[1]],self.node)
+				except KeyError:
+					pass
 
 	# thread for simulation delay by printing message after sleep
 	@thread(True)
@@ -122,21 +140,21 @@ class Server(object):
 
 		elif ops == 'insert' or ops == 'update':
 			self.lock.acquire(True)		# lock when enter cs
-			self.replica[key] = value
-			self.mytime = max(self.mytime+1,int(time_stamp)+1)	# update time stamp
-			self.stamps[key] = self.mytime
+			if key not in self.stamps or datetime.strptime(self.stamps[key]) < datetime.strptime(time_stamp):
+				self.replica[key] = value
+				self.stamps[key] = time_stamp
 			self.lock.release()		# leave the cs
-			# if own broadcast msg arrives,return ack
-			if node == str(self.node):
-				print "Ack %s" %(' '.join([ops,key,value]))
+			self.s.sendto(serialize('ack',key,value,model,time_stamp,node),self.central)	# send ack to central server
 
 		elif ops == 'get':
-			self.lock.acquire(True)		# enter cs
-			self.mytime = max(self.mytime+1,int(time_stamp)+1)
-			self.lock.release()		# leave the cs
-			# own broadcast msg arrives
-			if node == str(self.node):
-				print key,self.replica[key]
+			if node == self.node:
+				try:
+					print "Key %s with value %s" %(cmd[1],self.replica[cmd[1]])
+				except KeyError:
+					pass
+
+		elif ops == 'ack':
+			print "Ack %s : %s" %(key, value)
 
 
 if __name__ == '__main__':

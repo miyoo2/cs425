@@ -1,4 +1,4 @@
-from serializer import thread
+from serializer import thread,serialize,deserialize
 import json
 import socket
 import time
@@ -16,6 +16,7 @@ class Central(object):
 		self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)	# form a socket
 		self.s.bind((socket.gethostname(),self.port))
 		self.nodes = dict()
+		self.counter = 0	# count the acks
 
 		for key in data:
 			if key != "central":
@@ -40,9 +41,15 @@ class Central(object):
 				message, addr = self.sequence.get()	# fetch the message from the sequencer
 			except:
 				continue
-			if message:
+			ops,key,value,model,time_stamp,node = deserialize(message)
+			if ops != 'ack':
 				for port in self.nodes:
 					self.s.sendto(message, self.nodes[port])
+			else:
+				self.counter += 1
+				if self.counter == 4:
+					self.counter = 0
+					self.s.sendto(message,self.nodes[node])
 
 	@thread(False)
 	def quit(self):

@@ -19,4 +19,4 @@ def serialize(ops,key,value,model,time_stamp,node):
 
 def deserialize(message):
 	message = message.split(' ')
-	return message[0],message[1],message[2],message[3],message[4],message[5]
+	return message[0],message[1],message[2],message[3],message[4]+' '+message[5],message[6]
