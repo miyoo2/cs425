@@ -24,6 +24,7 @@ class Server(object):
 		self.lock = Lock()	# a threading lock
 		self.counter = dict() 	# count
 		self.invoke = False		# whether inside an operation
+		self.last = time.time()		# last invocation
 
 	"""json loader"""
 	def config(self,node):
@@ -50,20 +51,20 @@ class Server(object):
 			message, addr = self.s.recvfrom(1024)	# listen from the socket
 
 			self.inbox.put((message, addr))	# put message into the queue
-			self.receive()	# invoke a thread to deliver the message
+			self.receive()	# self.invoke a thread to deliver the message
 
 	# main thread read and write
 	@thread(False)
 	def read(self):
 		while True:
 			cmd = raw_input()
-			if invoke:
+			if self.invoke == True:
 				print "The last operation is still running"
 				continue
 
-			invoke = True
+			self.invoke = True
 
-			time.sleep(self.delay)	# delay the next operation
+			time.sleep(max(self.delay-time.time()+self.last,0))	# delay the next operation
 			self.delay = 0	# reset delay time
 
 			if cmd.lower().startswith('q'):
@@ -75,18 +76,19 @@ class Server(object):
 				# sanity
 				if len(cmd) < 3:
 					print 'Usage send [message] [dest]'
-					invoke = False
+					self.invoke = False
 					continue
 				#	use value field as message
 				self.s.sendto((serialize('send',0,cmd[1],0,time.time(),self.node)),self.nodes[cmd[2]])
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 
 			# delete a key through all replicas
 			elif cmd.lower().startswith('delete'):
 				cmd = cmd.split(' ')
 				if len(cmd) < 2:
 					print 'Usage delete [key]'
-					invoke = False
+					self.invoke = False
 					continue
 				for key in self.nodes:
 					if key != self.node:
@@ -96,13 +98,14 @@ class Server(object):
 					print 'Key %s deleted' %(cmd[1])
 				except KeyError:
 					pass
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 			# write operations
 			elif cmd.lower().startswith('insert') or cmd.lower().startswith('update'):
 				cmd = cmd.split(' ')
 				if len(cmd) < 4:
 					print 'Usage insert [key] [value] [Model]'
-					invoke = False
+					self.invoke = False
 					continue
 				# linearizibility & sequential consistency
 				if int(cmd[-1]) == 1 or int(cmd[-1]) == 2:
@@ -119,7 +122,7 @@ class Server(object):
 				cmd = cmd.split(' ')
 				if len(cmd) < 3:
 					print 'Usage get [key] [model]'
-					invoke = False
+					self.invoke = False
 					continue
 				# linearizability
 				if int(cmd[-1]) == 1:
@@ -130,7 +133,8 @@ class Server(object):
 						print "Key %s with value %s" %(cmd[1],self.replica[cmd[1]])
 					except KeyError:
 						print "Key DNE at local replica"
-					invoke = False
+					self.invoke = False
+					self.last = time.time()
 				# eventual
 				elif int(cmd[-1]) > 2:
 					time_stamp = time.time()
@@ -142,24 +146,26 @@ class Server(object):
 			elif cmd.lower().startswith('show-all'):
 				for key in self.replica:
 					print key,self.replica[key]
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 
 			# delay
 			elif cmd.lower().startswith('delay'):
 				cmd = cmd.split(' ')
 				if len(cmd) < 2:
 					print "Usage delay [T]"
-					invoke = False
+					self.invoke = False
 					continue
 				self.delay = int(cmd[1])
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 
 			# search key
 			elif cmd.lower().startswith('search'):
 				cmd = cmd.split(' ')
 				if len(cmd) < 2:
 					print "Usage search [key]"
-					invoke = False
+					self.invoke = False
 					continue
 
 				for key in self.nodes:
@@ -212,38 +218,44 @@ class Server(object):
 			self.counter[ops.split('_')[1]] += 1
 			if self.counter[ops.split('_')[1]] + 2 == int(model):
 				print "Key %s with value %s" %(key,self.replica[key])
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 
 		elif ops == 'Write_ack':
 			print "Ack %s : %s" %(key, value)
-			invoke = False
+			self.invoke = False
+			self.last = time.time()
 
 		elif ops == 'Read_ack':
 			try:
 				print "Key %s with value %s" %(key,self.replica[key])
 			except KeyError:
 				print "Key DNE at local replicaf"
-			invoke = False
+			self.invoke = False
+			self.last = time.time()
 
 		elif ops == 'Ack':
 			self.counter[time_stamp] += 1
 			if self.counter[time_stamp] + 2 == int(model):
 				print "Ack %s : %s" %(key, value)
-				invoke = False
+				self.invoke = False
+				self.last = time.time()
 
 		elif ops == 'search':
 			try:
 				self.s.sendto(serialize('Found',key,self.replica[key],model,self.stamps[key],self.node),self.nodes[node])
 			except:
-				self.s.sendto((serialize('NotFound',key,0,model,0,self.node),self.nodes[nodes]))
+				self.s.sendto(serialize('NotFound',key,0,model,0,self.node),self.nodes[node])
 
 		elif ops == 'Found':
 			print "Key %s with value %s found at %s" %(key,value,node)
-			invoke = False
+			self.invoke = False
+			self.last = time.time()
 
 		elif ops == 'NotFound':
-			print "Key %s DNE at node %s" %(key,nodeq)
-			invoke = False
+			print "Key %s DNE at node %s" %(key,node)
+			self.invoke = False
+			self.last = time.time()
 
 		elif ops == 'delete':
 			try:
