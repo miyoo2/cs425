@@ -29,8 +29,6 @@ class Central(object):
 	def run(self):
 		while True:
 			message, addr = self.s.recvfrom(1024)
-			if not message:
-				continue
 			self.sequence.put((message, addr))	# put the message into the sequencer
 
 

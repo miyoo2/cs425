@@ -51,7 +51,6 @@ class Server(object):
 			message, addr = self.s.recvfrom(1024)	# listen from the socket
 			# deserialize the message into components
 			ops,key,value,model,time_stamp,node = deserialize(message)
-
 			self.inbox[ord(node)-ord('a')].put((message, addr))	# put message into the queue
 			self.receive(ord(node)-ord('a'))	# self.invoke a thread to deliver the message
 
@@ -178,7 +177,7 @@ class Server(object):
 				except KeyError:
 					print "Key %s DNE at node %s" %(cmd[1],self.node)
 			else:
-				invoke = False
+				self.invoke = False
 				print "No such cmd"
 
 	# thread for simulation delay by printing message after sleep
